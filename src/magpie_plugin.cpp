@@ -105,7 +105,7 @@ public:
         switch (index) {
         case TMI_NAME: return L"Magpie Route";
         case TMI_DESCRIPTION: return L"Magpie 网关路由、额度、状态、延迟和用量监控";
-        case TMI_VERSION: return L"0.3.0";
+        case TMI_VERSION: return L"0.3.1";
         case TMI_URL: return L"https://github.com/yetone/magpie";
         default: return L"";
         }
