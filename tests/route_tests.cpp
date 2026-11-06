@@ -44,7 +44,7 @@ int main(int argumentCount, char** arguments)
     prefixed.model = "deepseek/model";
     Require(magpie::RouteText(prefixed, false) == "DEEPSEEK/MODEL", "Preserve model");
     Require(magpie::HistoryPath("codex &x=1").find("&agent=codex%20%26x%3D1") != std::string::npos, "Encode agent filter");
-    Require(magpie::HistoryPath("").find("via=through&computer=this&limit=1") != std::string::npos, "Query local gateway history only");
+    Require(magpie::HistoryPath("").find("via=through&computer=this&limit=20") != std::string::npos, "Query bounded local gateway history");
     for (const auto* body : {"not json", "{}", "{\"routes\":null}", "{\"routes\":[1]}"}) {
         bool threw = false;
         try { magpie::ParseRoutes(body, "", false); } catch (...) { threw = true; }
@@ -80,9 +80,18 @@ int main(int argumentCount, char** arguments)
     Require(magpie::FormatOutputSpeed(speed) == "40.0T/S", "Output speed excludes first token wait");
     const auto reasoningSpeed = magpie::ParseRoute(magpie::Json::parse(R"({"out":1200,"reasoning":1000,"ms":10000,"ttft_ms":1000,"first_text_ms":5000})"), true);
     Require(magpie::FormatOutputSpeed(reasoningSpeed) == "40.0T/S", "Exclude reasoning tokens and time");
-    for (const auto* body : {"{}", R"({"out":200,"ms":6000})", R"({"out":200,"ms":6000,"ttft_ms":1000,"status":500})", R"({"out":200,"ms":6000,"ttft_ms":1000,"reasoning_hidden":true})", R"({"out":200,"ms":6000,"ttft_ms":1000,"flow_ms":100})", R"({"out":200,"ms":6000,"ttft_ms":5900})"})
+    for (const auto* body : {"{}", R"({"out":200,"ms":6000})", R"({"out":200,"ms":6000,"ttft_ms":1000,"status":500})", R"({"out":200,"ms":6000,"ttft_ms":1000,"reasoning_hidden":true})", R"({"out":200,"ms":6000,"ttft_ms":1000,"first_text_ms":1000,"reasoning_hidden":true})"})
         Require(magpie::FormatOutputSpeed(magpie::ParseRoute(magpie::Json::parse(body), true)) == "-", "Do not invent speed from missing, failed or burst timing");
     Require(magpie::FormatOutputSpeed(magpie::ParseRoute(magpie::Json::parse(R"({"out":200,"ms":6000,"ttft_ms":1000})"), false)) == "-", "Active requests have no measured final speed");
+    const auto shortSpeed = magpie::ParseRoute(magpie::Json::parse(R"({"out":147,"ms":7417,"ttft_ms":6566})"), true);
+    Require(magpie::FormatOutputSpeed(shortSpeed) == "~172.7T/S", "Short sample is explicitly estimated");
+    const auto burstSpeed = magpie::ParseRoute(magpie::Json::parse(R"({"out":200,"ms":6000,"ttft_ms":1000,"flow_ms":100})"), true);
+    Require(burstSpeed.speedEstimated, "Burst delivery is labelled estimated");
+    const auto explicitZero = magpie::ParseRoute(magpie::Json::parse(R"({"out":200,"ms":6000,"ttft_ms":1000,"reasoning":0,"reasoning_hidden":true})"), true);
+    Require(explicitZero.outputSpeed == 40, "Known zero reasoning differs from missing reasoning");
+    const std::vector<magpie::Route> speedHistory{magpie::Route{}, shortSpeed, speed};
+    Require(magpie::LatestSpeed(speedHistory) == &speedHistory[1], "Skip invalid latest request without preferring older measurements");
+    Require(magpie::LatestSpeed({}) == nullptr, "Empty history has no speed");
     if (argumentCount == 3) {
         for (int index = 1; index <= 2; ++index) {
             std::ifstream input(arguments[index]);

@@ -33,7 +33,7 @@ SpeedCharacters=9
 | 项目 | 标签 | 来源与含义 |
 | --- | --- | --- |
 | Magpie Agent | `AGT: ` | 最新活动请求的 agent 名称，大写显示；空闲时显示最近完成请求的 agent，缺失显示 `-`。AgentCharacters 控制长度，默认 10，最大 100 |
-| Magpie Output Speed | `TPS: ` | 最近完成请求的输出速度，如 `42.5T/S`；排除首字等待及可识别的思考 token，按 Magpie 的计时规则过滤突发输出；数据不足或失败时显示 `-`。不是当前请求的实时速度，悬停可查看速度所属 agent。SpeedCharacters 默认 9，最大 20 |
+| Magpie Output Speed | `TPS: ` | 最近 20 条网关记录中最新有效的客户端观测输出速度，如 `42.5T/S`；排除首字等待及可识别的思考 token，短样本或疑似集中返回标记 `~`。隐藏思考且缺少计数等无法匹配令牌与计时的情况不计算。没有有效结果显示 `-`。悬停分别列出最近请求缺失原因及测速结果所属 agent、模型和请求时间。SpeedCharacters 默认 9，最大 20 |
 | Magpie Group | `GRP: ` | 分组调用显示大写分组名；直接指定模型显示 `DIRECT`；请求信息或分组名缺失时显示 `-`。有活动请求时取最新活动请求，空闲时取最近完成请求 |
 | Magpie Quota | `QTA: ` | `/v1/magpie/quotas?kept=1` 中最近使用的账号；有限额窗口时显示用量最高的窗口，如 `WEEK 72%`；否则显示余额 |
 | Magpie Status | `STS: ` | 当前连接及活动请求状态：`OK`、`FALLBACK`、`ERR 429` 或 `OFFLINE`，历史失败不影响当前状态；历史结果见悬停 |

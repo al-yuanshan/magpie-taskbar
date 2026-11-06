@@ -105,7 +105,7 @@ public:
         switch (index) {
         case TMI_NAME: return L"magpie-taskbar";
         case TMI_DESCRIPTION: return L"Magpie 网关路由、额度、状态、延迟和用量监控";
-        case TMI_VERSION: return L"0.3.2";
+        case TMI_VERSION: return L"0.3.3";
         case TMI_URL: return L"https://github.com/yetone/magpie";
         default: return L"";
         }
@@ -252,8 +252,7 @@ private:
 
             if (!history_.empty()) {
                 next.values[ITEM_LATENCY] = magpie::Wide(magpie::FormatLatency(history_.front().ttftMs));
-                next.values[ITEM_SPEED] = magpie::Wide(magpie::FormatOutputSpeed(history_.front()));
-                next.tooltip += L"\n上次输出速度（令牌/秒）：" + next.values[ITEM_SPEED] +
+                next.tooltip += L"\n最近请求测速说明：" + magpie::Wide(history_.front().speedReason) +
                     L"\n上次请求代理：" + magpie::Wide(magpie::FormatProvider(history_.front().agent)) +
                     L"\n上次请求模型：" + magpie::Wide(magpie::RouteText(history_.front(), config.compactName)) +
                     L"\n上次请求时间：" + magpie::Wide(history_.front().time) +
@@ -261,6 +260,17 @@ private:
                     L"\n上次总耗时：" + magpie::Wide(magpie::FormatLatency(history_.front().ms)) +
                     L"\n上次请求结果：" + magpie::Wide(magpie::StatusDescription(magpie::StatusText({history_.front()})));
             }
+            if (const auto* speed = magpie::LatestSpeed(history_)) {
+                next.values[ITEM_SPEED] = magpie::Wide(magpie::FormatOutputSpeed(*speed));
+                next.tooltip += L"\n最近有效输出速度（令牌/秒）：" + next.values[ITEM_SPEED] +
+                    L"\n测速代理：" + magpie::Wide(magpie::FormatProvider(speed->agent)) +
+                    L"\n测速模型：" + magpie::Wide(magpie::RouteText(*speed, config.compactName)) +
+                    L"\n测速请求时间：" + magpie::Wide(speed->time) +
+                    L"\n测速说明：" + magpie::Wide(speed->speedReason);
+            } else {
+                next.tooltip += L"\n最近 20 条网关请求中没有有效测速结果。";
+            }
+            if (!historyError_.empty()) next.tooltip += L"\n历史刷新失败，以上数据可能已过期：" + historyError_;
             next.values[ITEM_STATUS] = magpie::Wide(magpie::StatusText(live));
             next.tooltip += L"\n当前状态：" + magpie::Wide(magpie::StatusDescription(magpie::StatusText(live)));
 

@@ -24,6 +24,8 @@ struct Route {
     long long ms = 0;
     long long ttftMs = 0;
     double outputSpeed = 0;
+    bool speedEstimated = false;
+    std::string speedReason = "尚无已完成请求";
 };
 
 inline bool Bool(const Json& object, const char* key)
@@ -61,7 +63,8 @@ inline Route ParseRoute(const Json& value, bool history)
     const double firstText = Number(value, "first_text_ms");
     const double flow = Number(value, "flow_ms");
     double start = route.ttftMs;
-    bool measured = !Bool(value, "reasoning_hidden") || firstText > 0;
+    bool measured = !Bool(value, "reasoning_hidden") ||
+        (value.contains("reasoning") && value["reasoning"].is_number());
     if (reasoning > 0) {
         if (firstText > 0) {
             output -= reasoning;
@@ -73,11 +76,18 @@ inline Route ParseRoute(const Json& value, bool history)
         }
     }
     const double window = route.ms - start;
-    if (history && measured && !route.failed && route.status < 400 && Text(value, "err").empty() &&
-        route.ttftMs > 0 && output > 0 && window >= 100 && output * 1000 <= 10000 * window &&
-        !(flow > 0 && flow * 4 < window) && !(window < 1000 && start > 4 * window) &&
-        !(reasoning > 0 && firstText > 0 && output * (firstText - route.ttftMs) > 20 * reasoning * window))
+    if (!history) route.speedReason = "请求尚未完成";
+    else if (route.failed || route.status >= 400 || !Text(value, "err").empty()) route.speedReason = "请求失败";
+    else if (!measured) route.speedReason = "思考令牌数量或对应计时不明";
+    else if (route.ttftMs <= 0) route.speedReason = "缺少首字计时";
+    else if (output <= 0) route.speedReason = "没有可测速的输出令牌";
+    else if (window < 100 || !std::isfinite(output) || output * 1000 > 10000 * window) route.speedReason = "输出计时过短或数据异常";
+    else {
         route.outputSpeed = output * 1000 / window;
+        route.speedEstimated = (flow > 0 && flow * 4 < window) || (window < 1000 && start > 4 * window) ||
+            (reasoning > 0 && firstText > 0 && output * (firstText - route.ttftMs) > 20 * reasoning * window);
+        route.speedReason = route.speedEstimated ? "估算：短样本或疑似集中返回，仅代表客户端观测速度" : "客户端观测输出速度，排除首字等待";
+    }
     return route;
 }
 
@@ -85,7 +95,7 @@ inline std::string FormatOutputSpeed(const Route& route)
 {
     if (route.outputSpeed <= 0 || !std::isfinite(route.outputSpeed)) return "-";
     char text[64];
-    std::snprintf(text, sizeof(text), "%.1fT/S", route.outputSpeed);
+    std::snprintf(text, sizeof(text), "%s%.1fT/S", route.speedEstimated ? "~" : "", route.outputSpeed);
     return text;
 }
 
@@ -109,6 +119,13 @@ inline std::vector<Route> ParseRoutes(const std::string& body, const std::string
         routes.push_back(std::move(route));
     }
     return routes;
+}
+
+inline const Route* LatestSpeed(const std::vector<Route>& history)
+{
+    for (const auto& route : history)
+        if (route.outputSpeed > 0 && std::isfinite(route.outputSpeed)) return &route;
+    return nullptr;
 }
 
 inline std::string ToUpper(std::string s)
@@ -197,7 +214,7 @@ inline std::string PercentEncode(const std::string& value)
 
 inline std::string HistoryPath(const std::string& agent)
 {
-    std::string path = "/v1/magpie/usage/requests?period=month&via=through&computer=this&limit=1&offset=0";
+    std::string path = "/v1/magpie/usage/requests?period=month&via=through&computer=this&limit=20&offset=0";
     if (!agent.empty())
         path += "&agent=" + PercentEncode(agent);
     return path;
