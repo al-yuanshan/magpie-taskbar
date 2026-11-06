@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(MagpieTrafficMonitor VERSION 0.3.1 LANGUAGES CXX)
+project(MagpieTrafficMonitor VERSION 0.3.2 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_library(route_model INTERFACE)
