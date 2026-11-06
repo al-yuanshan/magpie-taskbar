@@ -1,0 +1,17 @@
+[Magpie]
+Port=3425
+Agent=
+RefreshMs=2000
+ModelCharacters=14
+ProviderCharacters=8
+GroupCharacters=16
+ActiveCharacters=3
+QuotaCharacters=12
+StatusCharacters=10
+WaitingCharacters=3
+LatencyCharacters=6
+CostCharacters=8
+TokenCharacters=9
+AgentCharacters=10
+SpeedCharacters=9
+CompactName=1
