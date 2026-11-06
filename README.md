@@ -41,7 +41,7 @@
 
 1. 退出 TrafficMonitor，将匹配架构的 `magpie-taskbar.dll` 放入其 `plugins` 文件夹。
 2. 启动 TrafficMonitor，在插件管理中确认已加载。
-3. 在插件选项中打开 `magpie-taskbar.ini`，首次打开会自动创建（旧版 `MagpieRoute.ini` 会自动复制）。示例见 `magpie-taskbar.ini.example`，各项长度见 [CHARACTER-SETTINGS.md](CHARACTER-SETTINGS.md)。
+3. 在插件选项中打开 `magpie-taskbar.ini`，首次打开会自动创建（旧版 `MagpieRoute.ini` 会自动复制）。示例见 `magpie-taskbar.ini.example`，各项长度见 [CHARACTER-SETTINGS.md](docs/CHARACTER-SETTINGS.md)。
 4. 修改字符数后需重启 TrafficMonitor 才会重新计算宽度。
 
 `Agent` 留空表示所有 agent；设置为 `codex`、`claude` 等可筛选。`RefreshMs` 范围 1000–60000，`Port` 默认 3425。
@@ -64,12 +64,12 @@ cmake --build build-tests
 ctest --test-dir build-tests --output-on-failure
 ```
 
-验证记录见 [VALIDATION.md](VALIDATION.md)。
+验证记录见 [VALIDATION.md](docs/VALIDATION.md)。
 
 ## 许可证
 
 本项目自身代码使用 [MIT](LICENSE)。
 
-`third_party/TrafficMonitor` 下的插件接口头文件来自 TrafficMonitor，遵循 "Anti 996" 许可证（含劳动法合规条款），不是 MIT。再分发时请原样保留该目录下的 `LICENSE` 和头文件中的版权声明；发布 DLL 时请一并附上 `LICENSE` 和 `THIRD_PARTY_NOTICES.md`。
+`third_party/TrafficMonitor` 下的插件接口头文件来自 TrafficMonitor，遵循 "Anti 996" 许可证（含劳动法合规条款），不是 MIT。再分发时请原样保留该目录下的 `LICENSE` 和头文件中的版权声明；发布 DLL 时请一并附上 `LICENSE` 和 `docs/THIRD_PARTY_NOTICES.md`。
 
-其他第三方组件及其许可证见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+其他第三方组件及其许可证见 [THIRD_PARTY_NOTICES.md](docs/THIRD_PARTY_NOTICES.md)。

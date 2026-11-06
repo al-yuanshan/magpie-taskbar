@@ -47,5 +47,5 @@ jobs:
           cd ..
           gh release create "$GITHUB_REF_NAME" assets/* \
             --title "$GITHUB_REF_NAME" \
-            --notes-file "release-notes/${GITHUB_REF_NAME}.md" \
+            --notes-file "docs/release-notes/${GITHUB_REF_NAME}.md" \
             --latest
