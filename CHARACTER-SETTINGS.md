@@ -36,9 +36,9 @@ SpeedCharacters=9
 | Magpie Output Speed | `TPS: ` | 最近完成请求的输出速度，如 `42.5T/S`；排除首字等待及可识别的思考 token，按 Magpie 的计时规则过滤突发输出；数据不足或失败时显示 `-`。不是当前请求的实时速度，悬停可查看速度所属 agent。SpeedCharacters 默认 9，最大 20 |
 | Magpie Group | `GRP: ` | 分组调用显示大写分组名；直接指定模型显示 `DIRECT`；请求信息或分组名缺失时显示 `-`。有活动请求时取最新活动请求，空闲时取最近完成请求 |
 | Magpie Quota | `QTA: ` | `/v1/magpie/quotas?kept=1` 中最近使用的账号；有限额窗口时显示用量最高的窗口，如 `WEEK 72%`；否则显示余额 |
-| Magpie Status | `STS: ` | `OK`、`FALLBACK`、`ERR 429` 或 `OFFLINE` |
+| Magpie Status | `STS: ` | 当前连接及活动请求状态：`OK`、`FALLBACK`、`ERR 429` 或 `OFFLINE`，历史失败不影响当前状态；历史结果见悬停 |
 | Magpie Waiting Requests | `WAIT: ` | `/v1/magpie/concurrency` 中排队等待槽位的请求数 |
-| Magpie Latency | `LAT: ` | 最近一次请求的首字延迟，没有时用总耗时 |
+| Magpie Latency | `LAT: ` | 上次完成请求的首字延迟，缺失时显示 `-`；总耗时在悬停中单独显示 |
 | Magpie Cost Today | `COST: ` | 今日费用，来自 `/v1/magpie/usage?period=today`，为所有 agent 合计，不受 Agent 筛选影响 |
 | Magpie Tokens Today | `TOK: ` | 今日输入加输出 token，同样为所有 agent 合计 |
 

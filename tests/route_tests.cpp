@@ -67,12 +67,13 @@ int main(int argumentCount, char** arguments)
     Require(magpie::FormatCount(usage.input + usage.output) == "3.2M", "Format token count");
     Require(magpie::FormatLatency(480) == "480MS" && magpie::FormatLatency(4880) == "4.9S" && magpie::FormatLatency(0) == "-", "Format latency");
     const auto failedLive = magpie::ParseRoutes(R"({"routes":[{"phase":"done","status":200},{"phase":"attempt","status":429,"failed":true},{"phase":"attempt","fallback":true}]})", "", false);
-    Require(magpie::StatusText(failedLive, {}) == "ERR 429", "Failed live route wins");
+    Require(magpie::StatusText(failedLive) == "ERR 429", "Failed live route wins");
     const auto fallbackLive = magpie::ParseRoutes(R"({"routes":[{"phase":"attempt","fallback":true}]})", "", false);
-    Require(magpie::StatusText(fallbackLive, {}) == "FALLBACK", "Fallback status");
+    Require(magpie::StatusText(fallbackLive) == "FALLBACK", "Fallback status");
     const auto failedHistory = magpie::ParseRoutes(R"({"rows":[{"status":503,"failed":true}]})", "", true);
-    Require(magpie::StatusText({}, failedHistory) == "ERR 503", "Latest failure status");
-    Require(magpie::StatusText({}, {}) == "OK", "Healthy status");
+    Require(magpie::StatusText(failedHistory) == "ERR 503", "Historical result can be shown separately");
+    Require(magpie::StatusText({}) == "OK", "Idle gateway does not inherit historical failure");
+    Require(magpie::StatusText({magpie::Route{}}) == "OK", "Healthy active request");
     const auto speed = magpie::ParseRoute(magpie::Json::parse(R"({"agent":"codex","out":200,"ms":6000,"ttft_ms":1000})"), true);
     Require(magpie::FormatProvider(speed.agent) == "CODEX", "Uppercase agent name");
     Require(magpie::FormatProvider("") == "-", "Missing agent stays unknown");

@@ -37,11 +37,11 @@ const ItemSpec specs[ITEM_COUNT] = {
     {L"Magpie 额度", L"MagpieRoute.Quota.v1", L"QTA: ", L"QuotaCharacters", 12, 40, L'0'},
     {L"Magpie 网关状态", L"MagpieRoute.Status.v1", L"STS: ", L"StatusCharacters", 10, 30, L'0'},
     {L"Magpie 排队请求数", L"MagpieRoute.Waiting.v1", L"WAIT: ", L"WaitingCharacters", 3, 10, L'9'},
-    {L"Magpie 首字延迟", L"MagpieRoute.Latency.v1", L"LAT: ", L"LatencyCharacters", 6, 20, L'0'},
+    {L"Magpie 上次首字延迟", L"MagpieRoute.Latency.v1", L"LAT: ", L"LatencyCharacters", 6, 20, L'0'},
     {L"Magpie 今日费用", L"MagpieRoute.Cost.v1", L"COST: ", L"CostCharacters", 8, 20, L'0'},
     {L"Magpie 今日令牌数", L"MagpieRoute.Tokens.v1", L"TOK: ", L"TokenCharacters", 9, 30, L'0'},
     {L"Magpie 当前代理", L"MagpieRoute.Agent.v1", L"AGT: ", L"AgentCharacters", 10, 100, L'0'},
-    {L"Magpie 输出令牌速度", L"MagpieRoute.Speed.v1", L"TPS: ", L"SpeedCharacters", 9, 20, L'0'},
+    {L"Magpie 上次输出令牌速度", L"MagpieRoute.Speed.v1", L"TPS: ", L"SpeedCharacters", 9, 20, L'0'},
 };
 
 struct Config {
@@ -54,7 +54,7 @@ struct Config {
 
 struct Display {
     std::array<std::wstring, ITEM_COUNT> values;
-    std::wstring tooltip = L"Magpie: waiting for first refresh";
+    std::wstring tooltip = L"Magpie：等待首次刷新";
     Display() { values.fill(L"-"); values[ITEM_MODEL] = L"LOADING"; }
 };
 
@@ -104,7 +104,7 @@ public:
     const wchar_t* GetInfo(PluginInfoIndex index) override {
         switch (index) {
         case TMI_NAME: return L"Magpie Route";
-        case TMI_DESCRIPTION: return L"Magpie gateway route, quota, status, latency and usage";
+        case TMI_DESCRIPTION: return L"Magpie 网关路由、额度、状态、延迟和用量监控";
         case TMI_VERSION: return L"0.3.0";
         case TMI_URL: return L"https://github.com/yetone/magpie";
         default: return L"";
@@ -139,7 +139,7 @@ public:
             for (const auto& spec : specs)
                 written = written && WritePrivateProfileStringW(L"Magpie", spec.key, std::to_wstring(spec.defaultCharacters).c_str(), path.c_str());
             if (!written) {
-                MessageBoxW(static_cast<HWND>(parent), L"Cannot create MagpieRoute.ini", L"Magpie Route", MB_ICONERROR);
+                MessageBoxW(static_cast<HWND>(parent), L"无法创建 MagpieRoute.ini 配置文件", L"Magpie Route", MB_ICONERROR);
                 return OR_OPTION_UNCHANGED;
             }
         }
@@ -167,7 +167,7 @@ private:
             config.characters[index] = specs[index].defaultCharacters;
         if (path.empty()) return config;
         const auto port = GetPrivateProfileIntW(L"Magpie", L"Port", 3425, path.c_str());
-        if (port == 0 || port > 65535) throw std::runtime_error("Port must be 1..65535");
+        if (port == 0 || port > 65535) throw std::runtime_error("端口必须在 1–65535 之间");
         config.port = static_cast<unsigned short>(port);
         config.interval = std::clamp(GetPrivateProfileIntW(L"Magpie", L"RefreshMs", 2000, path.c_str()), 1000u, 60000u);
         config.compactName = GetPrivateProfileIntW(L"Magpie", L"CompactName", 1, path.c_str()) != 0;
@@ -182,15 +182,15 @@ private:
         return config;
     }
     static std::wstring Details(const magpie::Route& route) {
-        std::string text = "\nAgent: " + route.agent + "\nRoute: " + magpie::RouteText(route, false);
-        if (!route.requested.empty()) text += "\nRequested: " + route.requested;
-        if (!route.upstream.empty()) text += "\nUpstream: " + route.upstream;
-        if (!route.time.empty()) text += "\nTime: " + route.time;
-        if (!route.phase.empty()) text += "\nPhase: " + route.phase;
-        if (route.fallback) text += "\nFallback: yes";
+        std::string text = "\n代理：" + route.agent + "\n实际模型：" + magpie::RouteText(route, false);
+        if (!route.requested.empty()) text += "\n请求模型或分组：" + route.requested;
+        if (!route.upstream.empty()) text += "\n上游：" + route.upstream;
+        if (!route.time.empty()) text += "\n请求时间：" + route.time;
+        if (!route.phase.empty()) text += "\n阶段：" + magpie::PhaseText(route.phase);
+        if (route.fallback) text += "\n降级：是";
         if (route.status) text += "\nHTTP: " + std::to_string(route.status);
-        if (route.ms > 0) text += "\nDuration: " + magpie::FormatLatency(route.ms);
-        if (route.ttftMs > 0) text += "\nFirst token: " + magpie::FormatLatency(route.ttftMs);
+        if (route.ms > 0) text += "\n总耗时：" + magpie::FormatLatency(route.ms);
+        if (route.ttftMs > 0) text += "\n首字延迟：" + magpie::FormatLatency(route.ttftMs);
         return magpie::Wide(text);
     }
     void Refresh() noexcept {
@@ -204,16 +204,16 @@ private:
             const ULONGLONG now = GetTickCount64();
             const auto live = magpie::ParseRoutes(magpie::Get(config.port, "/v1/magpie/route-events/snapshot"), config.agent, false);
             next.values[ITEM_ACTIVE] = std::to_wstring(live.size());
-            next.tooltip = L"Magpie (127.0.0.1:" + std::to_wstring(config.port) + L")\nActive: " + next.values[ITEM_ACTIVE];
-            if (!config.agent.empty()) next.tooltip += L"\nFilter: " + magpie::Wide(config.agent);
+            next.tooltip = L"Magpie (127.0.0.1:" + std::to_wstring(config.port) + L")\n活动请求数：" + next.values[ITEM_ACTIVE];
+            if (!config.agent.empty()) next.tooltip += L"\n代理筛选：" + magpie::Wide(config.agent);
 
             try {
                 const auto concurrency = magpie::ParseConcurrency(magpie::Get(config.port, "/v1/magpie/concurrency"));
                 next.values[ITEM_WAITING] = std::to_wstring(concurrency.waiting);
-                next.tooltip += L"\nWaiting: " + std::to_wstring(concurrency.waiting) + L"\nGateway requests: " + std::to_wstring(concurrency.requests);
-                if (concurrency.tools) next.tooltip += L"\nWaiting for tool results: " + std::to_wstring(concurrency.tools);
+                next.tooltip += L"\n排队请求数：" + std::to_wstring(concurrency.waiting) + L"\n网关请求数：" + std::to_wstring(concurrency.requests);
+                if (concurrency.tools) next.tooltip += L"\n等待工具结果：" + std::to_wstring(concurrency.tools);
             } catch (const std::exception& error) {
-                next.tooltip += L"\nConcurrency unavailable: " + magpie::Wide(error.what());
+                next.tooltip += L"\n并发信息获取失败：" + magpie::Wide(error.what());
             }
 
             if (live.empty() || now - historyAt_ >= 15000 || history_.empty()) {
@@ -233,7 +233,7 @@ private:
                 next.values[ITEM_PROVIDER] = magpie::Wide(magpie::FormatProvider(newest->provider));
                 next.values[ITEM_GROUP] = magpie::Wide(magpie::ExtractGroupName(newest->requested));
                 next.values[ITEM_AGENT] = magpie::Wide(magpie::FormatProvider(newest->agent));
-                next.tooltip += L"\nLive routing (up to 10 requests):";
+                next.tooltip += L"\n正在处理的路由（最多显示 10 条）：";
                 for (size_t index = 0; index < live.size() && index < 10; ++index)
                     next.tooltip += L"\n---" + Details(live[index]);
             } else if (!history_.empty()) {
@@ -241,20 +241,25 @@ private:
                 next.values[ITEM_PROVIDER] = magpie::Wide(magpie::FormatProvider(history_.front().provider));
                 next.values[ITEM_GROUP] = magpie::Wide(magpie::ExtractGroupName(history_.front().requested));
                 next.values[ITEM_AGENT] = magpie::Wide(magpie::FormatProvider(history_.front().agent));
-                next.tooltip += L"\nMost recent completed request:" + Details(history_.front());
+                next.tooltip += L"\n最近完成的请求：" + Details(history_.front());
             } else {
                 next.values[ITEM_MODEL] = historyError_.empty() ? L"IDLE" : L"-";
-                next.tooltip += historyError_.empty() ? L"\nNo recent gateway requests (last 30 days)." : L"\nHistory unavailable: " + historyError_;
+                next.tooltip += historyError_.empty() ? L"\n最近 30 天没有网关请求。" : L"\n历史记录获取失败：" + historyError_;
             }
 
             if (!history_.empty()) {
-                const auto latency = history_.front().ttftMs > 0 ? history_.front().ttftMs : history_.front().ms;
-                next.values[ITEM_LATENCY] = magpie::Wide(magpie::FormatLatency(latency));
+                next.values[ITEM_LATENCY] = magpie::Wide(magpie::FormatLatency(history_.front().ttftMs));
                 next.values[ITEM_SPEED] = magpie::Wide(magpie::FormatOutputSpeed(history_.front()));
-                next.tooltip += L"\nOutput speed (last completed request): " + next.values[ITEM_SPEED] +
-                    L"\nSpeed agent: " + magpie::Wide(magpie::FormatProvider(history_.front().agent));
+                next.tooltip += L"\n上次输出速度（令牌/秒）：" + next.values[ITEM_SPEED] +
+                    L"\n上次请求代理：" + magpie::Wide(magpie::FormatProvider(history_.front().agent)) +
+                    L"\n上次请求模型：" + magpie::Wide(magpie::RouteText(history_.front(), config.compactName)) +
+                    L"\n上次请求时间：" + magpie::Wide(history_.front().time) +
+                    L"\n上次首字延迟：" + next.values[ITEM_LATENCY] +
+                    L"\n上次总耗时：" + magpie::Wide(magpie::FormatLatency(history_.front().ms)) +
+                    L"\n上次请求结果：" + magpie::Wide(magpie::StatusDescription(magpie::StatusText({history_.front()})));
             }
-            next.values[ITEM_STATUS] = magpie::Wide(magpie::StatusText(live, history_));
+            next.values[ITEM_STATUS] = magpie::Wide(magpie::StatusText(live));
+            next.tooltip += L"\n当前状态：" + magpie::Wide(magpie::StatusDescription(magpie::StatusText(live)));
 
             if (now - quotaAt_ >= 15000 || quotaAt_ == 0) {
                 try {
@@ -271,16 +276,16 @@ private:
             }
             next.values[ITEM_QUOTA] = quotaText_;
             if (!quotaDetail_.empty()) next.tooltip += L"\n" + quotaDetail_;
-            if (!quotaError_.empty()) next.tooltip += L"\nQuota unavailable: " + quotaError_;
+            if (!quotaError_.empty()) next.tooltip += L"\n额度获取失败：" + quotaError_;
 
             if (now - usageAt_ >= 30000 || usageAt_ == 0) {
                 try {
                     const auto usage = magpie::ParseUsage(magpie::Get(config.port, "/v1/magpie/usage?period=today"));
                     usageCost_ = magpie::Wide(magpie::FormatCost(usage.cost));
                     usageTokens_ = magpie::Wide(magpie::FormatCount(usage.input + usage.output));
-                    usageDetail_ = L"Today (all agents): " + std::to_wstring(usage.calls) + L" calls, " +
-                        std::to_wstring(usage.errors) + L" errors\nCost: " + usageCost_ + L"\nInput: " +
-                        magpie::Wide(magpie::FormatCount(usage.input)) + L"\nOutput: " + magpie::Wide(magpie::FormatCount(usage.output));
+                    usageDetail_ = L"今日用量（所有代理）：" + std::to_wstring(usage.calls) + L" 次请求，" +
+                        std::to_wstring(usage.errors) + L" 次错误\n费用：" + usageCost_ + L"\n输入令牌：" +
+                        magpie::Wide(magpie::FormatCount(usage.input)) + L"\n输出令牌：" + magpie::Wide(magpie::FormatCount(usage.output));
                     usageError_.clear();
                 } catch (const std::exception& error) {
                     usageCost_ = usageTokens_ = L"-";
@@ -292,13 +297,13 @@ private:
             next.values[ITEM_COST] = usageCost_;
             next.values[ITEM_TOKENS] = usageTokens_;
             if (!usageDetail_.empty()) next.tooltip += L"\n" + usageDetail_;
-            if (!usageError_.empty()) next.tooltip += L"\nUsage unavailable: " + usageError_;
+            if (!usageError_.empty()) next.tooltip += L"\n用量获取失败：" + usageError_;
         } catch (const std::exception& error) {
             next = Display();
             next.values.fill(L"-");
             next.values[ITEM_MODEL] = L"UNAVAILABLE";
             next.values[ITEM_STATUS] = L"OFFLINE";
-            next.tooltip = L"Magpie unavailable: " + magpie::Wide(error.what()) + L"\nCheck Magpie is running, its version supports route-events, and the configured port.";
+            next.tooltip = L"Magpie 连接失败：" + magpie::Wide(error.what()) + L"\n请检查 Magpie 是否运行、端口是否正确，以及版本是否支持路由事件接口。";
             historyAt_ = quotaAt_ = usageAt_ = 0;
         } catch (...) {
             next.values.fill(L"-");

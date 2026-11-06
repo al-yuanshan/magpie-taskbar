@@ -94,11 +94,11 @@ inline std::vector<Route> ParseRoutes(const std::string& body, const std::string
     const auto document = Json::parse(body);
     const char* key = history ? "rows" : "routes";
     if (!document.is_object() || !document.contains(key) || !document[key].is_array())
-        throw std::runtime_error("Unexpected Magpie response schema");
+        throw std::runtime_error("Magpie 响应结构不符合预期");
     std::vector<Route> routes;
     for (const auto& value : document[key]) {
         if (!value.is_object())
-            throw std::runtime_error("Unexpected Magpie route schema");
+            throw std::runtime_error("Magpie 路由数据结构不符合预期");
         Route route = ParseRoute(value, history);
         if (!agent.empty() && route.agent != agent)
             continue;
@@ -211,7 +211,7 @@ inline Concurrency ParseConcurrency(const std::string& body)
 {
     const auto document = Json::parse(body);
     if (!document.is_object() || !document.contains("requests"))
-        throw std::runtime_error("Unexpected Magpie concurrency schema");
+        throw std::runtime_error("Magpie 并发数据结构不符合预期");
     Concurrency result;
     result.requests = static_cast<int>(Number(document, "requests"));
     result.waiting = static_cast<int>(Number(document, "waiting"));
@@ -235,7 +235,7 @@ inline Quota ParseQuota(const std::string& body)
 {
     const auto document = Json::parse(body);
     if (!document.is_object() || !document.contains("data") || !document["data"].is_array())
-        throw std::runtime_error("Unexpected Magpie quota schema");
+        throw std::runtime_error("Magpie 额度数据结构不符合预期");
     const Json* chosen = nullptr;
     for (const auto& card : document["data"])
         if (card.is_object() && Bool(card, "last")) { chosen = &card; break; }
@@ -245,7 +245,7 @@ inline Quota ParseQuota(const std::string& body)
     Quota quota;
     if (!chosen)
         return quota;
-    quota.detail = "Quota: " + Text(*chosen, "provider");
+    quota.detail = "额度所属供应商：" + Text(*chosen, "provider");
     const Json* worst = nullptr;
     const auto windows = chosen->find("windows");
     if (windows != chosen->end() && windows->is_array()) {
@@ -255,14 +255,14 @@ inline Quota ParseQuota(const std::string& body)
             const auto used = window.find("used");
             if (used == window.end() || !used->is_number())
                 continue;
-            quota.detail += "\n  " + Text(window, "name") + ": " + Percent(used->get<double>()) + " used";
+            quota.detail += "\n  " + Text(window, "name") + "：已用 " + Percent(used->get<double>());
             if (!worst || used->get<double>() > Number(*worst, "used"))
                 worst = &window;
         }
     }
     const auto balance = Text(*chosen, "balance");
     if (!balance.empty())
-        quota.detail += "\n  Balance: " + balance;
+        quota.detail += "\n  余额：" + balance;
     if (worst) {
         const auto name = ToUpper(Text(*worst, "name"));
         quota.text = (name.empty() ? "" : name + " ") + Percent(Number(*worst, "used"));
@@ -281,7 +281,7 @@ inline UsageSummary ParseUsage(const std::string& body)
 {
     const auto document = Json::parse(body);
     if (!document.is_object() || !document.contains("calls") || !document.contains("cost"))
-        throw std::runtime_error("Unexpected Magpie usage schema");
+        throw std::runtime_error("Magpie 用量数据结构不符合预期");
     UsageSummary usage;
     usage.calls = static_cast<long long>(Number(document, "calls"));
     usage.errors = static_cast<long long>(Number(document, "errors"));
@@ -322,7 +322,26 @@ inline std::string FormatLatency(long long milliseconds)
     return buffer;
 }
 
-inline std::string StatusText(const std::vector<Route>& live, const std::vector<Route>& history)
+inline std::string PhaseText(const std::string& phase)
+{
+    if (phase == "started") return "已开始";
+    if (phase == "attempt") return "正在连接上游";
+    if (phase == "responding") return "正在输出";
+    if (phase == "done") return "已完成";
+    if (phase == "dropped") return "已中断";
+    return phase;
+}
+
+inline std::string StatusDescription(const std::string& status)
+{
+    if (status == "OK") return "正常";
+    if (status == "FALLBACK") return "已降级";
+    if (status == "OFFLINE") return "无法连接网关";
+    if (status.rfind("ERR ", 0) == 0) return "请求失败（HTTP " + status.substr(4) + "）";
+    return status;
+}
+
+inline std::string StatusText(const std::vector<Route>& live)
 {
     for (const auto& route : live)
         if (route.failed || route.status >= 400)
@@ -330,8 +349,6 @@ inline std::string StatusText(const std::vector<Route>& live, const std::vector<
     for (const auto& route : live)
         if (route.fallback)
             return "FALLBACK";
-    if (!history.empty() && (history.front().failed || history.front().status >= 400))
-        return "ERR " + (history.front().status ? std::to_string(history.front().status) : std::string("?"));
     return "OK";
 }
 }

@@ -2,6 +2,12 @@
 
 日期：2026-11-06（Asia/Shanghai）。
 
+## 当前未发布修改
+
+- Debian WSL 下重新构建并运行 CTest，1/1 通过；检查当前活动请求的错误、降级、正常和空闲状态，历史结果与当前状态分开。
+- TPS、LAT 的所属请求信息已加入悬停；LAT 不再回退到总耗时。真实宿主中的显示仍需验证。
+- v0.3.0 的 GitHub Actions 已成功编译并测试 MSVC x64 和 Win32。下文“没有 MSVC 版本”及旧版显示样例仅为早期本地验证记录，不代表当前 Release 状态。
+
 ## 已完成
 
 - Debian WSL、GCC 12.2.0、CMake Release 构建路由解析测试成功；CTest 1/1 通过。测试使用显式断言函数，Release 模式不会关闭断言。

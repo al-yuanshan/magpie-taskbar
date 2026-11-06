@@ -12,14 +12,9 @@ jobs:
         arch: [x64, Win32]
     steps:
       - uses: actions/checkout@v4
-      - name: Configure
-        run: cmake -S . -B build/${{ matrix.arch }} -G "Visual Studio 17 2022" -A ${{ matrix.arch }}
-      - name: Build
-        run: cmake --build build/${{ matrix.arch }} --config Release
-      - name: Test
-        run: ctest --test-dir build/${{ matrix.arch }} -C Release --output-on-failure
-      - name: Install
-        run: cmake --install build/${{ matrix.arch }} --config Release --prefix dist/${{ matrix.arch }}
+      - name: Build and test
+        shell: pwsh
+        run: ./build.ps1 -Architecture ${{ matrix.arch }}
       - uses: actions/upload-artifact@v4
         with:
           name: MagpieRoute-${{ matrix.arch }}
