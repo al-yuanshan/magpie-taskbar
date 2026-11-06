@@ -55,7 +55,7 @@ struct Config {
 struct Display {
     std::array<std::wstring, ITEM_COUNT> values;
     std::wstring tooltip = L"Magpie：等待首次刷新";
-    Display() { values.fill(L"-"); values[ITEM_MODEL] = L"LOADING"; }
+    Display() { values.fill(L"-"); }
 };
 
 class Plugin;
@@ -231,8 +231,7 @@ private:
 
             if (!live.empty()) {
                 const auto newest = std::max_element(live.begin(), live.end(), [](const auto& left, const auto& right) { return left.time < right.time; });
-                next.values[ITEM_MODEL] = L"*" + magpie::Wide(magpie::RouteText(*newest, config.compactName));
-                if (live.size() > 1) next.values[ITEM_MODEL] += L"(" + std::to_wstring(live.size()) + L")";
+                next.values[ITEM_MODEL] = magpie::Wide(magpie::RouteText(*newest, config.compactName));
                 next.values[ITEM_PROVIDER] = magpie::Wide(magpie::FormatProvider(newest->provider));
                 next.values[ITEM_GROUP] = magpie::Wide(magpie::ExtractGroupName(newest->requested));
                 next.values[ITEM_AGENT] = magpie::Wide(magpie::FormatProvider(newest->agent));
@@ -246,7 +245,6 @@ private:
                 next.values[ITEM_AGENT] = magpie::Wide(magpie::FormatProvider(history_.front().agent));
                 next.tooltip += L"\n最近完成的请求：" + Details(history_.front());
             } else {
-                next.values[ITEM_MODEL] = historyError_.empty() ? L"IDLE" : L"-";
                 next.tooltip += historyError_.empty() ? L"\n最近 30 天没有网关请求。" : L"\n历史记录获取失败：" + historyError_;
             }
 
@@ -314,7 +312,6 @@ private:
         } catch (const std::exception& error) {
             next = Display();
             next.values.fill(L"-");
-            next.values[ITEM_MODEL] = L"UNAVAILABLE";
             next.values[ITEM_STATUS] = L"OFFLINE";
             next.tooltip = L"Magpie 连接失败：" + magpie::Wide(error.what()) + L"\n请检查 Magpie 是否运行、端口是否正确，以及版本是否支持路由事件接口。";
             historyAt_ = quotaAt_ = usageAt_ = 0;
