@@ -1,6 +1,6 @@
 # 各显示项长度配置
 
-在 TrafficMonitor 插件管理中打开 Magpie Route 的“选项”，编辑 `MagpieRoute.ini`，在 `[Magpie]` 下设置：
+在 TrafficMonitor 插件管理中打开 magpie-taskbar 的“选项”，编辑 `magpie-taskbar.ini`，在 `[Magpie]` 下设置：
 
 ```ini
 [Magpie]

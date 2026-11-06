@@ -103,7 +103,7 @@ public:
     }
     const wchar_t* GetInfo(PluginInfoIndex index) override {
         switch (index) {
-        case TMI_NAME: return L"Magpie Route";
+        case TMI_NAME: return L"magpie-taskbar";
         case TMI_DESCRIPTION: return L"Magpie 网关路由、额度、状态、延迟和用量监控";
         case TMI_VERSION: return L"0.3.2";
         case TMI_URL: return L"https://github.com/yetone/magpie";
@@ -121,7 +121,10 @@ public:
         configPath_ = data;
         if (!configPath_.empty() && configPath_.back() != L'\\' && configPath_.back() != L'/')
             configPath_ += L'\\';
-        configPath_ += L"MagpieRoute.ini";
+        const std::wstring legacyPath = configPath_ + L"MagpieRoute.ini";
+        configPath_ += L"magpie-taskbar.ini";
+        if (GetFileAttributesW(configPath_.c_str()) == INVALID_FILE_ATTRIBUTES && GetFileAttributesW(legacyPath.c_str()) != INVALID_FILE_ATTRIBUTES)
+            CopyFileW(legacyPath.c_str(), configPath_.c_str(), TRUE);
         nextPoll_ = 0;
     }
     OptionReturn ShowOptionsDialog(void* parent) override {
@@ -139,7 +142,7 @@ public:
             for (const auto& spec : specs)
                 written = written && WritePrivateProfileStringW(L"Magpie", spec.key, std::to_wstring(spec.defaultCharacters).c_str(), path.c_str());
             if (!written) {
-                MessageBoxW(static_cast<HWND>(parent), L"无法创建 MagpieRoute.ini 配置文件", L"Magpie Route", MB_ICONERROR);
+                MessageBoxW(static_cast<HWND>(parent), L"无法创建 magpie-taskbar.ini 配置文件", L"magpie-taskbar", MB_ICONERROR);
                 return OR_OPTION_UNCHANGED;
             }
         }

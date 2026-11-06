@@ -1,13 +1,13 @@
 param(
     [Parameter(Mandatory)][string]$Version,
     [Parameter(Mandatory)][ValidateSet('x64', 'Win32')][string]$Architecture,
-    [string]$DllPath = "dist/$Architecture/MagpieRoute.dll",
+    [string]$DllPath = "dist/$Architecture/magpie-taskbar.dll",
     [string]$OutputDirectory = 'dist/release'
 )
 $ErrorActionPreference = 'Stop'
 Set-Location $PSScriptRoot
 if (-not (Test-Path -LiteralPath $DllPath)) { throw "DLL not found: $DllPath" }
-$name = "MagpieRoute-v$Version-$Architecture"
+$name = "magpie-taskbar-v$Version-$Architecture"
 $stage = Join-Path $OutputDirectory $name
 New-Item -ItemType Directory -Path $stage -Force | Out-Null
 Copy-Item -LiteralPath $DllPath -Destination $stage

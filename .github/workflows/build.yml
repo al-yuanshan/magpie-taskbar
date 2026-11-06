@@ -17,5 +17,5 @@ jobs:
         run: ./build.ps1 -Architecture ${{ matrix.arch }}
       - uses: actions/upload-artifact@v4
         with:
-          name: MagpieRoute-${{ matrix.arch }}
-          path: dist/${{ matrix.arch }}/MagpieRoute.dll
+          name: magpie-taskbar-${{ matrix.arch }}
+          path: dist/${{ matrix.arch }}/magpie-taskbar.dll

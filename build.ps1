@@ -13,4 +13,4 @@ if ($LASTEXITCODE) { throw 'Build failed' }
 if ($LASTEXITCODE) { throw 'Tests failed' }
 & cmake --install "build/$Architecture" --config Release --prefix "dist/$Architecture"
 if ($LASTEXITCODE) { throw 'Install failed' }
-Write-Host "DLL: $PSScriptRoot/dist/$Architecture/MagpieRoute.dll"
+Write-Host "DLL: $PSScriptRoot/dist/$Architecture/magpie-taskbar.dll"

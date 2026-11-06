@@ -33,15 +33,15 @@
 ./build.ps1 -Architecture x64
 ```
 
-生成 `dist/x64/MagpieRoute.dll`。架构必须与 TrafficMonitor 一致（`x64`、`Win32`）。
+生成 `dist/x64/magpie-taskbar.dll`。架构必须与 TrafficMonitor 一致（`x64`、`Win32`）。
 
 也可在 WSL 用 MinGW 交叉编译：`bash build-mingw.sh`。MinGW 版只验证过虚表布局，未在真实 TrafficMonitor 中完整验证，出现崩溃请改用 MSVC 版。
 
 ## 安装与配置
 
-1. 退出 TrafficMonitor，将匹配架构的 `MagpieRoute.dll` 放入其 `plugins` 文件夹。
+1. 退出 TrafficMonitor，将匹配架构的 `magpie-taskbar.dll` 放入其 `plugins` 文件夹。
 2. 启动 TrafficMonitor，在插件管理中确认已加载。
-3. 在插件选项中打开 `MagpieRoute.ini`，首次打开会自动创建。示例见 `MagpieRoute.ini.example`，各项长度见 [CHARACTER-SETTINGS.md](CHARACTER-SETTINGS.md)。
+3. 在插件选项中打开 `magpie-taskbar.ini`，首次打开会自动创建（旧版 `MagpieRoute.ini` 会自动复制）。示例见 `magpie-taskbar.ini.example`，各项长度见 [CHARACTER-SETTINGS.md](CHARACTER-SETTINGS.md)。
 4. 修改字符数后需重启 TrafficMonitor 才会重新计算宽度。
 
 `Agent` 留空表示所有 agent；设置为 `codex`、`claude` 等可筛选。`RefreshMs` 范围 1000–60000，`Port` 默认 3425。

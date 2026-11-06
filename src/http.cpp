@@ -47,7 +47,7 @@ std::string Utf8(const std::wstring& value)
 
 std::string Get(unsigned short port, const std::string& path)
 {
-    InternetHandle session(WinHttpOpen(L"MagpieTrafficMonitor/0.1", WINHTTP_ACCESS_TYPE_NO_PROXY,
+    InternetHandle session(WinHttpOpen(L"magpie-taskbar/0.3", WINHTTP_ACCESS_TYPE_NO_PROXY,
         WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0));
     Check(WinHttpSetTimeouts(session, 1000, 1000, 1000, 2000));
     InternetHandle connection(WinHttpConnect(session, L"127.0.0.1", port, 0));

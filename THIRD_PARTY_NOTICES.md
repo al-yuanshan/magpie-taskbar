@@ -1,7 +1,7 @@
 # Third-party notices
 
 This project's own code is licensed under the MIT License (see `LICENSE`).
-The components below are compiled into `MagpieRoute.dll` and keep their original licenses, reproduced in full here.
+The components below are compiled into `magpie-taskbar.dll` and keep their original licenses, reproduced in full here.
 
 This is an unofficial plugin. It is not affiliated with or endorsed by TrafficMonitor or Magpie. It only reads Magpie's local HTTP API (`127.0.0.1`).
 

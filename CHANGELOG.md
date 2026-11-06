@@ -2,7 +2,8 @@
 
 ## 0.3.2
 
-- 发布包精简为 4 个文件：`MagpieRoute.dll`、简短安装说明、`LICENSE`、`THIRD_PARTY_NOTICES.md`（内含第三方许可证全文），不再附带第三方源码与开发文档。
+- 项目名称统一为 `magpie-taskbar`：DLL、压缩包、插件名称和配置文件 `magpie-taskbar.ini` 均采用新名称；旧 `MagpieRoute.ini` 会自动复制，显示项目 ID 保持不变，已有勾选不受影响。升级时请删除 `plugins` 中旧的 `MagpieRoute.dll`。
+- 发布包精简为 4 个文件：`magpie-taskbar.dll`、简短安装说明、`LICENSE`、`THIRD_PARTY_NOTICES.md`（内含第三方许可证全文），不再附带第三方源码与开发文档。
 - 推送版本标签后由 GitHub Actions 自动构建、测试、打包并发布 Release，附 SHA256 校验文件。
 
 ## 0.3.1
