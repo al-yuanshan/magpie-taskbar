@@ -4,6 +4,16 @@
 
 使用 TrafficMonitor 插件接口 API v8，独立 DLL，只读，只访问本机 `127.0.0.1`，不读取密钥、prompt 或回复内容。
 
+## 截图
+
+任务栏显示效果（示意图，数值为示例）：
+
+![任务栏显示效果](docs/images/taskbar.png)
+
+插件选项中的可视化设置窗口：
+
+![设置窗口](docs/images/settings.png)
+
 ## 显示项
 
 在 TrafficMonitor 的显示项目中按需勾选，每项独立，文字统一大写：
