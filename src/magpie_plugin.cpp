@@ -75,7 +75,7 @@ public:
         switch (index) {
         case TMI_NAME: return L"magpie-taskbar";
         case TMI_DESCRIPTION: return L"Magpie 网关路由、额度、状态、延迟和用量监控";
-        case TMI_VERSION: return L"0.3.4";
+        case TMI_VERSION: return L"0.4.0";
         case TMI_URL: return L"https://github.com/yetone/magpie";
         default: return L"";
         }
