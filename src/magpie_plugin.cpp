@@ -1,5 +1,4 @@
 #include <windows.h>
-#include <shellapi.h>
 #include <array>
 #include <atomic>
 #include <mutex>
@@ -8,41 +7,12 @@
 #include "TrafficMonitor/PluginInterface.h"
 #include "route_model.h"
 #include "http.h"
+#include "options_dialog.h"
 
 namespace {
 HMODULE moduleHandle = nullptr;
 
-enum ItemType {
-    ITEM_MODEL, ITEM_PROVIDER, ITEM_GROUP, ITEM_ACTIVE,
-    ITEM_QUOTA, ITEM_STATUS, ITEM_WAITING, ITEM_LATENCY, ITEM_COST, ITEM_TOKENS,
-    ITEM_AGENT, ITEM_SPEED,
-    ITEM_COUNT
-};
-
-struct ItemSpec {
-    const wchar_t* name;
-    const wchar_t* id;
-    const wchar_t* label;
-    const wchar_t* key;
-    unsigned defaultCharacters;
-    unsigned maximumCharacters;
-    wchar_t sample;
-};
-
-const ItemSpec specs[ITEM_COUNT] = {
-    {L"Magpie 模型", L"MagpieRoute.Model.v1", L"MDL: ", L"ModelCharacters", 14, 100, L'0'},
-    {L"Magpie 供应商", L"MagpieRoute.Provider.v1", L"PRV: ", L"ProviderCharacters", 8, 100, L'0'},
-    {L"Magpie 路由分组", L"MagpieRoute.Group.v1", L"GRP: ", L"GroupCharacters", 16, 100, L'0'},
-    {L"Magpie 活动请求数", L"MagpieRoute.Active.v1", L"ACT: ", L"ActiveCharacters", 3, 10, L'9'},
-    {L"Magpie 额度", L"MagpieRoute.Quota.v1", L"QTA: ", L"QuotaCharacters", 12, 40, L'0'},
-    {L"Magpie 网关状态", L"MagpieRoute.Status.v1", L"STS: ", L"StatusCharacters", 10, 30, L'0'},
-    {L"Magpie 排队请求数", L"MagpieRoute.Waiting.v1", L"WAIT: ", L"WaitingCharacters", 3, 10, L'9'},
-    {L"Magpie 上次首字延迟", L"MagpieRoute.Latency.v1", L"LAT: ", L"LatencyCharacters", 6, 20, L'0'},
-    {L"Magpie 今日费用", L"MagpieRoute.Cost.v1", L"COST: ", L"CostCharacters", 8, 20, L'0'},
-    {L"Magpie 今日令牌数", L"MagpieRoute.Tokens.v1", L"TOK: ", L"TokenCharacters", 9, 30, L'0'},
-    {L"Magpie 当前代理", L"MagpieRoute.Agent.v1", L"AGT: ", L"AgentCharacters", 10, 100, L'0'},
-    {L"Magpie 上次输出令牌速度", L"MagpieRoute.Speed.v1", L"TPS: ", L"SpeedCharacters", 9, 20, L'0'},
-};
+using namespace magpie;
 
 struct Config {
     unsigned short port = 3425;
@@ -134,20 +104,13 @@ public:
             path = configPath_;
         }
         if (path.empty()) return OR_OPTION_NOT_PROVIDED;
-        if (GetFileAttributesW(path.c_str()) == INVALID_FILE_ATTRIBUTES) {
-            bool written = WritePrivateProfileStringW(L"Magpie", L"Port", L"3425", path.c_str()) &&
-                WritePrivateProfileStringW(L"Magpie", L"Agent", L"", path.c_str()) &&
-                WritePrivateProfileStringW(L"Magpie", L"RefreshMs", L"2000", path.c_str()) &&
-                WritePrivateProfileStringW(L"Magpie", L"CompactName", L"1", path.c_str());
-            for (const auto& spec : specs)
-                written = written && WritePrivateProfileStringW(L"Magpie", spec.key, std::to_wstring(spec.defaultCharacters).c_str(), path.c_str());
-            if (!written) {
-                MessageBoxW(static_cast<HWND>(parent), L"无法创建 magpie-taskbar.ini 配置文件", L"magpie-taskbar", MB_ICONERROR);
-                return OR_OPTION_UNCHANGED;
-            }
-        }
-        ShellExecuteW(static_cast<HWND>(parent), L"open", L"notepad.exe", (L"\"" + path + L"\"").c_str(), nullptr, SW_SHOWNORMAL);
-        return OR_OPTION_UNCHANGED;
+        if (!ShowSettingsDialog(static_cast<HWND>(parent), moduleHandle, path)) return OR_OPTION_UNCHANGED;
+        const Settings settings = LoadSettings(path);
+        for (int index = 0; index < ITEM_COUNT; ++index)
+            characters_[index] = settings.characters[index];
+        reload_ = true;
+        nextPoll_ = 0;
+        return OR_OPTION_CHANGED;
     }
     Display ReadDisplay() const {
         std::lock_guard<std::mutex> lock(mutex_);
@@ -166,22 +129,13 @@ private:
             path = configPath_;
         }
         Config config;
-        for (int index = 0; index < ITEM_COUNT; ++index)
-            config.characters[index] = specs[index].defaultCharacters;
-        if (path.empty()) return config;
-        const auto port = GetPrivateProfileIntW(L"Magpie", L"Port", 3425, path.c_str());
-        if (port == 0 || port > 65535) throw std::runtime_error("端口必须在 1–65535 之间");
-        config.port = static_cast<unsigned short>(port);
-        config.interval = std::clamp(GetPrivateProfileIntW(L"Magpie", L"RefreshMs", 2000, path.c_str()), 1000u, 60000u);
-        config.compactName = GetPrivateProfileIntW(L"Magpie", L"CompactName", 1, path.c_str()) != 0;
-        const auto legacy = GetPrivateProfileIntW(L"Magpie", L"MaxCharacters", specs[ITEM_MODEL].defaultCharacters, path.c_str());
-        for (int index = 0; index < ITEM_COUNT; ++index) {
-            const unsigned fallback = index == ITEM_MODEL ? legacy : specs[index].defaultCharacters;
-            config.characters[index] = std::clamp(GetPrivateProfileIntW(L"Magpie", specs[index].key, fallback, path.c_str()), 1u, specs[index].maximumCharacters);
-        }
-        wchar_t agent[256]{};
-        GetPrivateProfileStringW(L"Magpie", L"Agent", L"", agent, 256, path.c_str());
-        config.agent = magpie::Utf8(agent);
+        const Settings settings = path.empty() ? Settings() : LoadSettings(path);
+        config.characters = settings.characters;
+        if (settings.port < 1 || settings.port > 65535) throw std::runtime_error("端口必须在 1–65535 之间");
+        config.port = static_cast<unsigned short>(settings.port);
+        config.interval = settings.refreshMs;
+        config.compactName = settings.compactName;
+        config.agent = magpie::Utf8(settings.agent);
         return config;
     }
     static std::wstring Details(const magpie::Route& route) {
@@ -200,6 +154,10 @@ private:
         unsigned interval = 2000;
         Display next;
         try {
+            if (reload_.exchange(false)) {
+                historyAt_ = quotaAt_ = usageAt_ = 0;
+                history_.clear();
+            }
             const Config config = ReadConfig();
             interval = config.interval;
             for (int index = 0; index < ITEM_COUNT; ++index)
@@ -229,8 +187,10 @@ private:
                 }
             }
 
+            std::string currentModel;
             if (!live.empty()) {
                 const auto newest = std::max_element(live.begin(), live.end(), [](const auto& left, const auto& right) { return left.time < right.time; });
+                currentModel = magpie::ModelKey(*newest);
                 next.values[ITEM_MODEL] = magpie::Wide(magpie::RouteText(*newest, config.compactName));
                 next.values[ITEM_PROVIDER] = magpie::Wide(magpie::FormatProvider(newest->provider));
                 next.values[ITEM_GROUP] = magpie::Wide(magpie::ExtractGroupName(newest->requested));
@@ -239,6 +199,7 @@ private:
                 for (size_t index = 0; index < live.size() && index < 10; ++index)
                     next.tooltip += L"\n---" + Details(live[index]);
             } else if (!history_.empty()) {
+                currentModel = magpie::ModelKey(history_.front());
                 next.values[ITEM_MODEL] = magpie::Wide(magpie::RouteText(history_.front(), config.compactName));
                 next.values[ITEM_PROVIDER] = magpie::Wide(magpie::FormatProvider(history_.front().provider));
                 next.values[ITEM_GROUP] = magpie::Wide(magpie::ExtractGroupName(history_.front().requested));
@@ -258,15 +219,25 @@ private:
                     L"\n上次总耗时：" + magpie::Wide(magpie::FormatLatency(history_.front().ms)) +
                     L"\n上次请求结果：" + magpie::Wide(magpie::StatusDescription(magpie::StatusText({history_.front()})));
             }
-            if (const auto* speed = magpie::LatestSpeed(history_)) {
-                next.values[ITEM_SPEED] = magpie::Wide(magpie::FormatOutputSpeed(*speed));
-                next.tooltip += L"\n最近有效输出速度（令牌/秒）：" + next.values[ITEM_SPEED] +
-                    L"\n测速代理：" + magpie::Wide(magpie::FormatProvider(speed->agent)) +
-                    L"\n测速模型：" + magpie::Wide(magpie::RouteText(*speed, config.compactName)) +
-                    L"\n测速请求时间：" + magpie::Wide(speed->time) +
-                    L"\n测速说明：" + magpie::Wide(speed->speedReason);
+            const auto speed = magpie::SummarizeSpeed(history_, currentModel);
+            if (speed.samples) {
+                next.values[ITEM_SPEED] = magpie::Wide(magpie::FormatSpeed(speed.speed, speed.estimated));
+                next.tooltip += L"\n输出速度（令牌/秒）：" + next.values[ITEM_SPEED] +
+                    L"\n测速模型：" + magpie::Wide(magpie::RouteText(*speed.latest, config.compactName)) +
+                    L"\n测速样本：" + std::to_wstring(speed.samples) + L" 条，按令牌加权平均" +
+                    (speed.estimated ? L"（样本不足 3 条，仅供参考）" : L"") +
+                    L"\n单条范围：" + magpie::Wide(magpie::FormatSpeed(speed.minSpeed, false)) + L" ~ " +
+                    magpie::Wide(magpie::FormatSpeed(speed.maxSpeed, false)) +
+                    L"\n最新样本时间：" + magpie::Wide(speed.latest->time) +
+                    L"\n测速口径：首个令牌到请求结束，包含思考令牌";
             } else {
-                next.tooltip += L"\n最近 20 条网关请求中没有有效测速结果。";
+                next.tooltip += currentModel.empty() ? L"\n输出速度：没有可测速的模型。"
+                    : L"\n输出速度：当前模型在最近 20 条网关请求中没有有效测速样本。";
+            }
+            if (speed.excluded) {
+                next.tooltip += L"\n排除样本：" + std::to_wstring(speed.excluded) + L" 条";
+                for (const auto& [reason, count] : speed.reasons)
+                    next.tooltip += L"\n  " + magpie::Wide(reason) + L"：" + std::to_wstring(count) + L" 条";
             }
             if (!historyError_.empty()) next.tooltip += L"\n历史刷新失败，以上数据可能已过期：" + historyError_;
             next.values[ITEM_STATUS] = magpie::Wide(magpie::StatusText(live));
@@ -334,6 +305,7 @@ private:
     std::wstring historyError_, quotaText_ = L"-", quotaDetail_, quotaError_, usageCost_ = L"-", usageTokens_ = L"-", usageDetail_, usageError_;
     ULONGLONG historyAt_ = 0, quotaAt_ = 0, usageAt_ = 0;
     std::atomic<bool> busy_{false};
+    std::atomic<bool> reload_{false};
     std::atomic<ULONGLONG> nextPoll_{0};
     std::array<std::atomic<unsigned>, ITEM_COUNT> characters_;
 };

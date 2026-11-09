@@ -8,7 +8,7 @@
 2. 退出 TrafficMonitor，把 `magpie-taskbar.dll` 放入其 `plugins` 文件夹。
 3. 启动 TrafficMonitor，在显示项目中勾选需要的 `Magpie ...` 项目。
 
-插件选项会打开 `magpie-taskbar.ini`（首次自动创建），可设置端口、agent 筛选、刷新间隔和各项显示长度。修改长度后需重启 TrafficMonitor。
+插件“选项”会打开设置窗口，可设置端口、agent 筛选、刷新间隔、精简模型名称和各项显示长度，并可测试与 Magpie 的连接。若修改长度后任务栏宽度未更新，请重启 TrafficMonitor。
 
 完整说明、配置项和问题反馈：https://github.com/al-yuanshan/magpie-taskbar
 

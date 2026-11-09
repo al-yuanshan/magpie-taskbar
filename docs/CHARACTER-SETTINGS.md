@@ -1,6 +1,6 @@
 # 各显示项长度配置
 
-在 TrafficMonitor 插件管理中打开 magpie-taskbar 的“选项”，编辑 `magpie-taskbar.ini`，在 `[Magpie]` 下设置：
+推荐在 TrafficMonitor 插件管理中打开 magpie-taskbar 的“选项”，直接在设置窗口中修改，输入范围会自动校验。设置窗口对应 `magpie-taskbar.ini` 中 `[Magpie]` 下的以下配置，也可点击“打开配置文件”手动编辑：
 
 ```ini
 [Magpie]
@@ -33,7 +33,7 @@ SpeedCharacters=9
 | 项目 | 标签 | 来源与含义 |
 | --- | --- | --- |
 | Magpie Agent | `AGT: ` | 最新活动请求的 agent 名称，大写显示；空闲时显示最近完成请求的 agent，缺失显示 `-`。AgentCharacters 控制长度，默认 10，最大 100 |
-| Magpie Output Speed | `TPS: ` | 最近 20 条网关记录中最新有效的客户端观测输出速度，如 `42.5T/S`；排除首字等待及可识别的思考 token，短样本或疑似集中返回标记 `~`。隐藏思考且缺少计数等无法匹配令牌与计时的情况不计算。没有有效结果显示 `-`。悬停分别列出最近请求缺失原因及测速结果所属 agent、模型和请求时间。SpeedCharacters 默认 9，最大 20 |
+| Magpie Output Speed | `TPS: ` | 当前模型最近 5 条有效请求的令牌加权平均输出速度，如 `152.3T/S`；计时从首个令牌到请求结束。小样本、集中返回、超过 1000 T/S 及隐藏思考缺少计数的请求不参与计算；有效样本不足 3 条标记 `~`。没有有效样本显示 `-`。悬停列出样本数、单条范围及排除原因。SpeedCharacters 默认 9，最大 20 |
 | Magpie Group | `GRP: ` | 分组调用显示大写分组名；直接指定模型显示 `DIRECT`；请求信息或分组名缺失时显示 `-`。有活动请求时取最新活动请求，空闲时取最近完成请求 |
 | Magpie Quota | `QTA: ` | `/v1/magpie/quotas?kept=1` 中最近使用的账号；有限额窗口时显示用量最高的窗口，如 `WEEK 72%`；否则显示余额 |
 | Magpie Status | `STS: ` | 当前连接及活动请求状态：`OK`、`FALLBACK`、`ERR 429` 或 `OFFLINE`，历史失败不影响当前状态；历史结果见悬停 |
@@ -46,4 +46,4 @@ SpeedCharacters=9
 
 模型、供应商和分组可设 1–100，请求数量可设 1–10。不包含 `MDL: ` 等标签。超长内容使用省略号，悬停查看完整详情。字符数同时用于预留显示宽度；字体为比例字体时，实际像素宽度不等同于字符数。旧 `MaxCharacters` 仍作为模型项的兼容默认值，新的 ModelCharacters 优先。
 
-保存后下次刷新应用截断限制。TrafficMonitor 会缓存布局宽度，修改后请重启程序以更新占位宽度。
+通过设置窗口保存后立即应用截断限制并通知 TrafficMonitor 设置已更改；若占位宽度未更新，或是手动编辑了 ini，请重启 TrafficMonitor。

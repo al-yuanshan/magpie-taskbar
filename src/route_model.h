@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace magpie {
@@ -24,9 +25,16 @@ struct Route {
     long long ms = 0;
     long long ttftMs = 0;
     double outputSpeed = 0;
-    bool speedEstimated = false;
+    double speedTokens = 0;
+    double speedWindowMs = 0;
     std::string speedReason = "尚无已完成请求";
 };
+
+constexpr double SPEED_MIN_WINDOW_MS = 1000;
+constexpr double SPEED_MIN_TOKENS = 64;
+constexpr double SPEED_MAX_TPS = 1000;
+constexpr int SPEED_SAMPLES = 5;
+constexpr int SPEED_STABLE_SAMPLES = 3;
 
 inline bool Bool(const Json& object, const char* key)
 {
@@ -58,45 +66,39 @@ inline Route ParseRoute(const Json& value, bool history)
     route.failed = Bool(value, "failed");
     route.ms = static_cast<long long>(Number(value, "ms"));
     route.ttftMs = static_cast<long long>(Number(value, "ttft_ms"));
-    double output = Number(value, "out");
-    const double reasoning = Number(value, "reasoning");
-    const double firstText = Number(value, "first_text_ms");
+    const double output = Number(value, "out");
     const double flow = Number(value, "flow_ms");
-    double start = route.ttftMs;
-    bool measured = !Bool(value, "reasoning_hidden") ||
+    const bool measured = !Bool(value, "reasoning_hidden") ||
         (value.contains("reasoning") && value["reasoning"].is_number());
-    if (reasoning > 0) {
-        if (firstText > 0) {
-            output -= reasoning;
-            start = firstText;
-        } else if (Number(value, "first_reasoning_ms") >= route.ttftMs && flow > 0 && reasoning <= output) {
-            start = Number(value, "first_reasoning_ms");
-        } else {
-            measured = false;
-        }
-    }
-    const double window = route.ms - start;
+    const double window = static_cast<double>(route.ms - route.ttftMs);
     if (!history) route.speedReason = "请求尚未完成";
     else if (route.failed || route.status >= 400 || !Text(value, "err").empty()) route.speedReason = "请求失败";
     else if (!measured) route.speedReason = "思考令牌数量或对应计时不明";
     else if (route.ttftMs <= 0) route.speedReason = "缺少首字计时";
-    else if (output <= 0) route.speedReason = "没有可测速的输出令牌";
-    else if (window < 100 || !std::isfinite(output) || output * 1000 > 10000 * window) route.speedReason = "输出计时过短或数据异常";
+    else if (output <= 0 || !std::isfinite(output)) route.speedReason = "没有可测速的输出令牌";
+    else if (window < SPEED_MIN_WINDOW_MS || output < SPEED_MIN_TOKENS) route.speedReason = "样本过小（输出不足 64 令牌或计时不足 1 秒）";
+    else if (flow > 0 && flow * 4 < window) route.speedReason = "疑似集中返回（流式时长不足输出时长的 25%）";
+    else if (output * 1000 > SPEED_MAX_TPS * window) route.speedReason = "速度超过 1000 T/S，数据异常";
     else {
         route.outputSpeed = output * 1000 / window;
-        route.speedEstimated = (flow > 0 && flow * 4 < window) || (window < 1000 && start > 4 * window) ||
-            (reasoning > 0 && firstText > 0 && output * (firstText - route.ttftMs) > 20 * reasoning * window);
-        route.speedReason = route.speedEstimated ? "估算：短样本或疑似集中返回，仅代表客户端观测速度" : "客户端观测输出速度，排除首字等待";
+        route.speedTokens = output;
+        route.speedWindowMs = window;
+        route.speedReason = "有效样本";
     }
     return route;
 }
 
+inline std::string FormatSpeed(double speed, bool estimated)
+{
+    if (speed <= 0 || !std::isfinite(speed)) return "-";
+    char text[64];
+    std::snprintf(text, sizeof(text), "%s%.1fT/S", estimated ? "~" : "", speed);
+    return text;
+}
+
 inline std::string FormatOutputSpeed(const Route& route)
 {
-    if (route.outputSpeed <= 0 || !std::isfinite(route.outputSpeed)) return "-";
-    char text[64];
-    std::snprintf(text, sizeof(text), "%s%.1fT/S", route.speedEstimated ? "~" : "", route.outputSpeed);
-    return text;
+    return FormatSpeed(route.outputSpeed, false);
 }
 
 inline std::vector<Route> ParseRoutes(const std::string& body, const std::string& agent, bool history)
@@ -121,11 +123,49 @@ inline std::vector<Route> ParseRoutes(const std::string& body, const std::string
     return routes;
 }
 
-inline const Route* LatestSpeed(const std::vector<Route>& history)
+inline std::string ModelKey(const Route& route)
 {
-    for (const auto& route : history)
-        if (route.outputSpeed > 0 && std::isfinite(route.outputSpeed)) return &route;
-    return nullptr;
+    return route.served.empty() ? route.model : route.served;
+}
+
+struct SpeedSummary {
+    double speed = 0;
+    double minSpeed = 0;
+    double maxSpeed = 0;
+    int samples = 0;
+    int excluded = 0;
+    bool estimated = false;
+    const Route* latest = nullptr;
+    std::vector<std::pair<std::string, int>> reasons;
+};
+
+inline SpeedSummary SummarizeSpeed(const std::vector<Route>& history, const std::string& model)
+{
+    SpeedSummary summary;
+    double tokens = 0, window = 0;
+    for (const auto& route : history) {
+        if (summary.samples >= SPEED_SAMPLES) break;
+        if (model.empty() || ModelKey(route) != model) continue;
+        if (route.outputSpeed <= 0 || !std::isfinite(route.outputSpeed)) {
+            ++summary.excluded;
+            auto found = std::find_if(summary.reasons.begin(), summary.reasons.end(),
+                [&](const auto& item) { return item.first == route.speedReason; });
+            if (found == summary.reasons.end()) summary.reasons.emplace_back(route.speedReason, 1);
+            else ++found->second;
+            continue;
+        }
+        if (!summary.latest) summary.latest = &route;
+        summary.minSpeed = summary.samples ? std::min(summary.minSpeed, route.outputSpeed) : route.outputSpeed;
+        summary.maxSpeed = std::max(summary.maxSpeed, route.outputSpeed);
+        tokens += route.speedTokens;
+        window += route.speedWindowMs;
+        ++summary.samples;
+    }
+    if (summary.samples) {
+        summary.speed = tokens * 1000 / window;
+        summary.estimated = summary.samples < SPEED_STABLE_SAMPLES;
+    }
+    return summary;
 }
 
 inline std::string ToUpper(std::string s)
