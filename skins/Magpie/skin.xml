@@ -1,0 +1,64 @@
+<root>
+	<skin>
+		<text_color>16777215</text_color>
+		<specify_each_item_color>0</specify_each_item_color>
+		<skin_author>magpie-taskbar</skin_author>
+		<font name="Segoe UI Semibold" size="10" style="0"/>
+	</skin>
+	<plugin_map>
+		<magpie_model>MagpieRoute.Model.v1</magpie_model>
+		<magpie_provider>MagpieRoute.Provider.v1</magpie_provider>
+		<magpie_group>MagpieRoute.Group.v1</magpie_group>
+		<magpie_agent>MagpieRoute.Agent.v1</magpie_agent>
+		<magpie_active>MagpieRoute.Active.v1</magpie_active>
+		<magpie_waiting>MagpieRoute.Waiting.v1</magpie_waiting>
+		<magpie_quota>MagpieRoute.Quota.v1</magpie_quota>
+		<magpie_status>MagpieRoute.Status.v1</magpie_status>
+		<magpie_latency>MagpieRoute.Latency.v1</magpie_latency>
+		<magpie_speed>MagpieRoute.Speed.v1</magpie_speed>
+		<magpie_cost>MagpieRoute.Cost.v1</magpie_cost>
+		<magpie_tokens>MagpieRoute.Tokens.v1</magpie_tokens>
+	</plugin_map>
+	<layout text_height="22" no_label="1">
+		<layout_l width="500" height="186">
+			<up x="20" y="32" width="110" align="0" show="1"/>
+			<down x="138" y="32" width="110" align="0" show="1"/>
+			<cpu x="256" y="32" width="110" align="0" show="1"/>
+			<memory x="374" y="32" width="110" align="0" show="1"/>
+
+			<magpie_model x="20" y="94" width="150" align="0" show="1"/>
+			<magpie_provider x="178" y="94" width="100" align="0" show="1"/>
+			<magpie_group x="286" y="94" width="100" align="0" show="1"/>
+			<magpie_agent x="394" y="94" width="90" align="0" show="1"/>
+
+			<magpie_quota x="20" y="156" width="75" align="0" show="1"/>
+			<magpie_status x="102" y="156" width="75" align="0" show="1"/>
+			<magpie_speed x="184" y="156" width="95" align="0" show="1"/>
+			<magpie_latency x="286" y="156" width="70" align="0" show="1"/>
+			<magpie_cost x="362" y="156" width="65" align="0" show="1"/>
+			<magpie_tokens x="432" y="156" width="55" align="0" show="1"/>
+		</layout_l>
+		<layout_s width="500" height="186">
+			<up x="20" y="32" width="110" align="0" show="1"/>
+			<down x="138" y="32" width="110" align="0" show="1"/>
+			<cpu x="256" y="32" width="110" align="0" show="1"/>
+			<memory x="374" y="32" width="110" align="0" show="1"/>
+
+			<magpie_model x="20" y="94" width="150" align="0" show="1"/>
+			<magpie_provider x="178" y="94" width="100" align="0" show="1"/>
+			<magpie_group x="286" y="94" width="100" align="0" show="1"/>
+			<magpie_agent x="394" y="94" width="90" align="0" show="1"/>
+
+			<magpie_quota x="20" y="156" width="75" align="0" show="1"/>
+			<magpie_status x="102" y="156" width="75" align="0" show="1"/>
+			<magpie_speed x="184" y="156" width="95" align="0" show="1"/>
+			<magpie_latency x="286" y="156" width="70" align="0" show="1"/>
+			<magpie_cost x="362" y="156" width="65" align="0" show="1"/>
+			<magpie_tokens x="432" y="156" width="55" align="0" show="1"/>
+		</layout_s>
+	</layout>
+	<preview width="500" height="186">
+		<l x="0" y="0"/>
+		<s x="0" y="0"/>
+	</preview>
+</root>

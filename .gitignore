@@ -4,3 +4,19 @@ dist/
 *.ini
 !MagpieRoute.ini.example
 *.zip
+
+# Local reference repositories
+/references/
+/scripts/
+
+# Python caches and virtual environments
+__pycache__/
+*.py[cod]
+/.venv/
+/venv/
+
+# Local editor and OS files
+/.vs/
+/.idea/
+Thumbs.db
+.DS_Store

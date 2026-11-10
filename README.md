@@ -1,10 +1,14 @@
 # magpie-taskbar
 
-在 [TrafficMonitor](https://github.com/zhongyang219/TrafficMonitor) 任务栏显示 [Magpie](https://github.com/yetone/magpie) 网关的实时路由、额度、状态和用量。非官方插件，与 TrafficMonitor、Magpie 无隶属关系。
+在 [TrafficMonitor](https://github.com/zhongyang219/TrafficMonitor) 任务栏和主窗口显示 [Magpie](https://github.com/yetone/magpie) 网关的实时路由、额度、状态和用量。非官方插件，与 TrafficMonitor、Magpie 无隶属关系。
 
 使用 TrafficMonitor 插件接口 API v8，独立 DLL，只读，只访问本机 `127.0.0.1`，不读取密钥、prompt 或回复内容。
 
 ## 截图
+
+主窗口皮肤预览（根据随附皮肤配置合成，数值为示例，并非实际运行截图）：
+
+![主窗口皮肤预览](docs/images/main-window.png)
 
 任务栏显示效果（示意图，数值为示例）：
 
@@ -55,6 +59,20 @@
 4. 设置窗口保存后立即刷新数据，并通知 TrafficMonitor 设置已更改；若任务栏宽度未更新，重启 TrafficMonitor。也可点击“打开配置文件”直接编辑 ini，手动编辑后需重启。示例见 `magpie-taskbar.ini.example`，各项长度见 [CHARACTER-SETTINGS.md](docs/CHARACTER-SETTINGS.md)。
 
 `Agent` 留空表示所有 agent；设置为 `codex`、`claude` 等可筛选。`RefreshMs` 范围 1000–60000，`Port` 默认 3425。
+
+## 主窗口显示
+
+TrafficMonitor 主窗口（悬浮窗）的“显示文本”设置只列出当前皮肤布局中声明过的项目，内置皮肤不含 Magpie 项，所以默认看不到。任务栏窗口不受皮肤限制。
+
+1. 将仓库的 `skins/Magpie` 文件夹复制到 TrafficMonitor 的 `skins` 目录。
+2. 在 TrafficMonitor 的“选项 → 主窗口设置”中切换到皮肤 `Magpie`。
+3. 主窗口将呈现极简暗黑卡片风格（三层逻辑结构：系统硬件监控、AI 路由模型、网关度量），标签微灰置顶，数值大号清晰排列。
+
+皮肤尺寸为 500×186，大小窗口布局一致。当前显示上传、下载、CPU、内存，以及模型、供应商、分组、代理、额度、状态、速度、延迟、费用、令牌数，共 14 项；活动请求数与排队请求数仍可在任务栏中选择，未放入该皮肤布局。
+
+更新皮肤时覆盖整个 `skins/Magpie` 文件夹，再重新选择皮肤或重启 TrafficMonitor。标签已绘制在背景图中，`no_label="1"` 用于隐藏软件默认前缀。窗口内的数值仍由插件实时提供。若字体或颜色沿用了旧设置，请在主窗口设置中恢复皮肤默认字体与颜色。
+
+其他皮肤需在 `skin.xml` 中加入 `<plugin_map>`（元素名对应本插件项 ID，见 `src/settings.h`）和 `layout_l`/`layout_s` 中的对应坐标。
 
 ## 使用的接口
 
